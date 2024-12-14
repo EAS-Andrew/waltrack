@@ -11,8 +11,8 @@ const formatTokenAmount = (amount: number, decimals: number): string => {
   return (amount / Math.pow(10, decimals)).toFixed(decimals > 6 ? 6 : decimals);
 };
 
-const getActivityDetails = (activity: any): { details: string; usdValue?: string } => {
-  if (activity.activity_type?.includes('SWAP') && activity.amount_info) {
+const getActivityDetails = (activity: DefiActivity | TransferActivity): { details: string; usdValue?: string } => {
+  if (activity.activity_type?.includes('SWAP') && 'amount_info' in activity) {
     const amount1 = formatTokenAmount(activity.amount_info.amount1, activity.amount_info.token1_decimals);
     const amount2 = formatTokenAmount(activity.amount_info.amount2, activity.amount_info.token2_decimals);
     const token1Symbol = activity.token1Info?.symbol || 'Unknown';
