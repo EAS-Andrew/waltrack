@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getWalletTransfers, getDefiActivities, getTokenAccounts, findBundledWallets, getWalletTokenSummary, formatUSD, formatNumber } from './utils/solscan';
+import { useState } from 'react';
+import {  formatUSD, formatNumber } from './utils/solscan';
 import type { TrackedWallet } from './types/wallet';
-import type { TokenInfo, TokenPosition, TokenPositionChange, WalletTokenSummary, TransferActivity, DefiActivity } from './utils/solscan';
+import type { TokenPosition, TokenPositionChange, WalletTokenSummary, TransferActivity, DefiActivity } from './utils/solscan';
 import type { WalletActivity } from './types/activity';
 import { fetchWalletData, calculateTokenSummary } from './services/walletService';
 
@@ -172,7 +172,7 @@ const TokenPositions = ({ positions, positionChanges }: {
             )}
 
             <div className="space-y-1">
-              {position.positions.map((pos, idx) => (
+              {position.positions.map((pos) => (
                 <div key={pos.address} className="flex justify-between text-xs">
                   <span className="text-gray-500 font-mono">
                     {pos.address.slice(0, 8)}...{pos.address.slice(-4)}
@@ -310,7 +310,7 @@ const TokenFilter = ({
 
         {Object.keys(filteredGroups).length === 0 && searchQuery && (
           <div className="text-center py-4 text-gray-500 text-sm">
-            No tokens found matching "{searchQuery}"
+            No tokens found matching &quot;{searchQuery}&quot;
           </div>
         )}
       </div>
@@ -529,7 +529,7 @@ export default function Home() {
           const wallet = await processWallet(address);
           newWallets.push(wallet);
           setProcessingStatus(prev => ({ ...prev, [address]: 'Success' }));
-        } catch (err) {
+        } catch {
           setProcessingStatus(prev => ({ ...prev, [address]: 'Failed' }));
         }
       }

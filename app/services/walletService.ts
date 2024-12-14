@@ -1,4 +1,4 @@
-import { TokenInfo, WalletTokenSummary } from '../utils/solscan';
+import { TokenInfo, WalletTokenSummary, SolscanResponse, TokenAccount } from '../utils/solscan';
 
 export async function fetchWalletData(address: string) {
   try {
@@ -28,7 +28,7 @@ export async function fetchWalletData(address: string) {
 
 // Helper function to calculate token summary from token accounts
 export function calculateTokenSummary(
-  tokenAccounts: any[],
+  tokenAccounts: SolscanResponse<TokenAccount[]>[],
   mainAddress: string,
   bundledAddresses: string[]
 ): WalletTokenSummary {
@@ -47,7 +47,7 @@ export function calculateTokenSummary(
     
     const address = index === 0 ? mainAddress : bundledAddresses[index - 1];
     
-    accountResponse.data.forEach((account: any) => {
+    accountResponse.data.forEach((account: TokenAccount) => {
       if (!account.tokenInfo) return;
 
       const tokenAddress = account.token_address;

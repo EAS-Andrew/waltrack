@@ -14,7 +14,7 @@ const headers = {
   'token': process.env.SOLSCAN_API_KEY || ''
 };
 
-interface SolscanResponse<T> {
+export interface SolscanResponse<T> {
   success: boolean;
   data: T;
 }
