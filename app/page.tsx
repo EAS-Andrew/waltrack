@@ -622,10 +622,14 @@ export default function Home() {
 
       <main className="relative max-w-6xl mx-auto p-4 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 sm:mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 animate-text-gradient">
-              Solana Wallet Tracker
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-500">
+              WAL
             </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-500">
+              TRACK
+            </span>
+            <span className="text-xs ml-1 text-gray-500 font-normal">v1</span>
           </h1>
           <div className="flex items-center gap-4 bg-gray-900/50 p-2 rounded-lg border border-gray-800">
             <div className="text-sm">
