@@ -119,6 +119,59 @@ export interface TokenPositionChange {
 const tokenInfoCache: { [address: string]: TokenInfo & { timestamp: number } } = {};
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Add rate limiting constants
+const RATE_LIMIT = {
+  MAX_REQUESTS_PER_MINUTE: 60,
+  RETRY_DELAY_MS: 2000,
+  MAX_RETRIES: 3
+};
+
+// Rate limiting queue
+let requestQueue: { timestamp: number }[] = [];
+
+// Helper function to check and update rate limit
+const checkRateLimit = () => {
+  const now = Date.now();
+  // Remove requests older than 1 minute
+  requestQueue = requestQueue.filter(req => now - req.timestamp < 60000);
+  
+  if (requestQueue.length >= RATE_LIMIT.MAX_REQUESTS_PER_MINUTE) {
+    const oldestRequest = requestQueue[0];
+    const waitTime = 60000 - (now - oldestRequest.timestamp);
+    return waitTime > 0 ? waitTime : 0;
+  }
+  return 0;
+};
+
+// Helper function to add request to queue
+const addRequest = () => {
+  requestQueue.push({ timestamp: Date.now() });
+};
+
+// Helper function to make rate-limited API calls with retries
+const makeRateLimitedRequest = async <T>(
+  requestFn: () => Promise<T>,
+  retryCount = 0
+): Promise<T> => {
+  try {
+    const waitTime = checkRateLimit();
+    if (waitTime > 0) {
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    addRequest();
+    return await requestFn();
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 429) {
+      if (retryCount < RATE_LIMIT.MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.RETRY_DELAY_MS));
+        return makeRateLimitedRequest(requestFn, retryCount + 1);
+      }
+    }
+    throw error;
+  }
+};
+
 export async function getTokenInfo(tokenAddress: string): Promise<TokenInfo | undefined> {
   const now = Date.now();
   const cached = tokenInfoCache[tokenAddress];
@@ -139,10 +192,12 @@ export async function getTokenInfo(tokenAddress: string): Promise<TokenInfo | un
   }
 
   try {
-    const response = await axios.get(`${SOLSCAN_API_BASE}/token/meta`, {
-      params: { address: tokenAddress },
-      headers
-    });
+    const response = await makeRateLimitedRequest(() => 
+      axios.get(`${SOLSCAN_API_BASE}/token/meta`, {
+        params: { address: tokenAddress },
+        headers
+      })
+    );
 
     if (response.data.success) {
       const data = response.data.data;
@@ -170,20 +225,21 @@ export async function getTokenInfo(tokenAddress: string): Promise<TokenInfo | un
 
 export async function getWalletTransfers(address: string, pageSize: number = 100) {
   try {
-    const response = await axios.get<SolscanResponse<TransferActivity[]>>(`${SOLSCAN_API_BASE}/account/transfer`, {
-      params: {
-        address,
-        activity_type: ['ACTIVITY_SPL_TRANSFER'],
-        page: 1,
-        page_size: pageSize,
-        sort_by: 'block_time',
-        sort_order: 'desc'
-      },
-      headers
-    });
+    const response = await makeRateLimitedRequest(() =>
+      axios.get<SolscanResponse<TransferActivity[]>>(`${SOLSCAN_API_BASE}/account/transfer`, {
+        params: {
+          address,
+          activity_type: ['ACTIVITY_SPL_TRANSFER'],
+          page: 1,
+          page_size: pageSize,
+          sort_by: 'block_time',
+          sort_order: 'desc'
+        },
+        headers
+      })
+    );
 
     if (response.data.success) {
-      // Enhance transfer data with token info
       const enhancedData = await Promise.all(
         response.data.data.map(async (transfer) => {
           const tokenInfo = await getTokenInfo(transfer.token_address);
@@ -201,20 +257,21 @@ export async function getWalletTransfers(address: string, pageSize: number = 100
 
 export async function getDefiActivities(address: string, pageSize: number = 100) {
   try {
-    const response = await axios.get<SolscanResponse<DefiActivity[]>>(`${SOLSCAN_API_BASE}/account/defi/activities`, {
-      params: {
-        address,
-        activity_type: ['ACTIVITY_TOKEN_SWAP', 'ACTIVITY_AGG_TOKEN_SWAP'],
-        page: 1,
-        page_size: pageSize,
-        sort_by: 'block_time',
-        sort_order: 'desc'
-      },
-      headers
-    });
+    const response = await makeRateLimitedRequest(() =>
+      axios.get<SolscanResponse<DefiActivity[]>>(`${SOLSCAN_API_BASE}/account/defi/activities`, {
+        params: {
+          address,
+          activity_type: ['ACTIVITY_TOKEN_SWAP', 'ACTIVITY_AGG_TOKEN_SWAP'],
+          page: 1,
+          page_size: pageSize,
+          sort_by: 'block_time',
+          sort_order: 'desc'
+        },
+        headers
+      })
+    );
 
     if (response.data.success) {
-      // Enhance DeFi data with token info
       const enhancedData = await Promise.all(
         response.data.data.map(async (activity) => {
           if (activity.amount_info) {
@@ -238,19 +295,20 @@ export async function getDefiActivities(address: string, pageSize: number = 100)
 
 export async function getTokenAccounts(address: string, pageSize: number = 30) {
   try {
-    const response = await axios.get<SolscanResponse<TokenAccount[]>>(`${SOLSCAN_API_BASE}/account/token-accounts`, {
-      params: {
-        address,
-        type: 'token',
-        page: 1,
-        page_size: pageSize,
-        hide_zero: true
-      },
-      headers
-    });
+    const response = await makeRateLimitedRequest(() =>
+      axios.get<SolscanResponse<TokenAccount[]>>(`${SOLSCAN_API_BASE}/account/token-accounts`, {
+        params: {
+          address,
+          type: 'token',
+          page: 1,
+          page_size: pageSize,
+          hide_zero: true
+        },
+        headers
+      })
+    );
 
     if (response.data.success) {
-      // Enhance token account data with token info
       const enhancedData = await Promise.all(
         response.data.data.map(async (account) => {
           const tokenInfo = await getTokenInfo(account.token_address);
